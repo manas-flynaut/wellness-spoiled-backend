@@ -3,10 +3,10 @@ const auth = require("./auth")
 const routes = (app) => {
     // Test Route for API
     app.get("/welcome", (req, res) => {
-        res.send("Welcome to API")
+        res.send("Welcome to API for Wellness Spoiled")
     })
 
-    app.use("/" , auth)
+    app.use("/v1/api" , auth)
 
     return app
 }
