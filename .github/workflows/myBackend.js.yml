@@ -19,4 +19,4 @@ jobs:
             cache: 'npm'
         - run: |
             npm i
-            npm server
+            npm run server
