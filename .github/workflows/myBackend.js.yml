@@ -19,6 +19,4 @@ jobs:
             cache: 'npm'
         - run: |
             npm i
-            pm2 stop all
-            pm2 delete all 
             pm2 start ./src/server.js
