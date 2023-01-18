@@ -9,11 +9,16 @@ const authRoute = express.Router()
 authRoute.post(
     '/sendOtp',
     [
+        check('countryCode')
+            .isLength({
+                min: 1
+            })
+            .withMessage('Please provide a Country Code.'),
         check('phone')
             .isLength({
                 min: 3
             })
-            .withMessage('Please provide a phone'),
+            .withMessage('Please provide a Phone Number.'),
     ],
     sendOtpRequest
 )
@@ -27,9 +32,13 @@ authRoute.post(
             })
             .withMessage('Please provide a name'),
         check('email').isEmail().withMessage('Please provide a valid E-Mail!'),
+        check('phone').isMobilePhone().withMessage('Please provide a valid Phone Number!'),
         check('password')
             .isLength({ min: 8 })
-            .withMessage('Password length should be minimum of 8 characters')
+            .withMessage('Password length should be minimum of 8 characters'),
+        check('otp')
+            .isLength({ min: 4 })
+            .withMessage('OTP Length should be 4 digits')
     ],
     signUp
 )

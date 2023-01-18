@@ -2,29 +2,36 @@ const express = require("express")
 const jwt = require("jsonwebtoken")
 const mongoose = require("mongoose")
 const { loggerUtil } = require("../utils/logger")
-const { OK, WRONG_ENTITY, BAD_REQUEST, NOT_FOUND, UNAUTHORIZED } = require("../utils/statusCode")
+const { OK, WRONG_ENTITY, BAD_REQUEST, NOT_FOUND, UNAUTHORIZED, INTERNAL_SERVER_ERROR } = require("../utils/statusCode")
 const User = require("../models/userModel")
 const { validationResult } = require('express-validator')
 const { hashPassword, authenticate } = require("../helpers/auth")
 const { response } = require("express")
-const messagebird = require('messagebird')(process.env.MESSAGE_BIRD_API_KEY);
+const dotenv = require('dotenv')
+dotenv.config()
+
+
+const twilioAccountSID = process.env.TWILIO_ACCOUNT_SID
+const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN
+const twilioServiceSID = process.env.TWILIO_SERVICE_SID
+const twilio = require("twilio")(twilioAccountSID, twilioAuthToken)
 
 const sendOtpRequest = async (req, res) => {
-    const { phone } = req.body
-    const params = {
-        template: "Your OTP for Wellness Spoiled is %token",
-        timeout: 60
-    }
-    try {
-        messagebird.verify.create(phone, params, function (err, response) {
-            if (err) {
-                return res.status(err.statusCode).json(err)
-            }
-            return res.status(OK).json({
-                message: "OTP send Successfully.",
-                data: response
-            })
+    const errors = validationResult(req) || []
+    if (!errors.isEmpty()) {
+        return res.status(WRONG_ENTITY).json({
+            error: errors.array()[0]?.msg
         })
+    }
+    const { countryCode, phone } = req.body
+    try {
+        twilio.verify.v2.services(twilioServiceSID)
+            .verifications
+            .create({ to: `+${countryCode}${phone}`, channel: 'sms' })
+            .then(verification => res.status(OK).json({
+                message: "OTP send Successfully.",
+                data: verification
+            })).catch(err => res.status(err.status).json({ err }))
     }
     catch (err) {
         loggerUtil(err)
@@ -41,30 +48,38 @@ const signUp = async (req, res) => {
             error: errors.array()[0]?.msg
         })
     }
-    const { name, phone, email, password } = req.body
+    const { name, phone, email, password, otp } = req.body
     try {
-        User.findOne({ email: email }).then(user => {
-            if (user)
-                return res.status(BAD_REQUEST).json({ error: "Email already registered." });
-        })
-        User.findOne({ phone: phone }).then(user => {
-            if (user)
-                return res.status(BAD_REQUEST).json({ error: "Phone Number already regitered." });
-        })
-        const newUser = new User({
-            userId: 1,
-            name: name,
-            phone: phone,
-            email: email,
-            encrypted_password: hashPassword(password, process.env.SALT || ''),
-        });
-        newUser
-            .save()
-            .then(user => res.status(OK).json({
-                message: "User Registered Successfully.",
-                data: user
-            }))
-            .catch(err => res.status(BAD_REQUEST).json({ message: err.message }));
+        User.find({ email: email, phone: phone }).then(user => {
+            if (user.length !== 0) {
+                return res.status(BAD_REQUEST).json({ error: "Email or Phone Number already registered." });
+            } else {
+                twilio.verify.v2.services(twilioServiceSID)
+                    .verificationChecks
+                    .create({ to: `+${phone}`, code: otp })
+                    .then(verification_check => {
+                        if (verification_check.status === "approved") {
+                            const newUser = new User({
+                                userId: 1,
+                                name: name,
+                                phone: phone,
+                                email: email,
+                                encrypted_password: hashPassword(password, process.env.SALT || ''),
+                            });
+                            newUser
+                                .save()
+                                .then(user => res.status(OK).json({
+                                    message: "User Registered Successfully.",
+                                    data: user
+                                }))
+                                .catch(err => res.status(BAD_REQUEST).json({ message: err.message }));
+                        }
+                        else {
+                            return res.status(BAD_REQUEST).json({ error: "Entered OTP is Invalid." })
+                        }
+                    }).catch(err => res.status(err.status).json({ err }))
+            }
+        }).catch((err) => { return res.status(INTERNAL_SERVER_ERROR).json({ error: err }) })
 
     } catch (err) {
         loggerUtil(err, 'ERROR')
@@ -128,7 +143,8 @@ const login = async (req, res) => {
     }
 }
 
-const signout = (res) => {
+const signout = (req, res) => {
+    res.clearCookie('Token')
     res.status(OK).json({
         message: 'User Signed Out Sucessfully!'
     })
