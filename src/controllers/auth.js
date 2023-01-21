@@ -10,7 +10,6 @@ const { response } = require("express")
 const dotenv = require('dotenv')
 dotenv.config()
 
-
 const twilioAccountSID = process.env.TWILIO_ACCOUNT_SID
 const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN
 const twilioServiceSID = process.env.TWILIO_SERVICE_SID
@@ -59,20 +58,25 @@ const signUp = async (req, res) => {
                     .create({ to: `+${phone}`, code: otp })
                     .then(verification_check => {
                         if (verification_check.status === "approved") {
-                            const newUser = new User({
-                                userId: 1,
-                                name: name,
-                                phone: phone,
-                                email: email,
-                                encrypted_password: hashPassword(password, process.env.SALT || ''),
-                            });
-                            newUser
-                                .save()
-                                .then(user => res.status(OK).json({
-                                    message: "User Registered Successfully.",
-                                    data: user
-                                }))
-                                .catch(err => res.status(BAD_REQUEST).json({ message: err.message }));
+                            User
+                                .findOne({})
+                                .sort({ createdAt: -1 })
+                                .then((data) => {
+                                    const newUser = new User({
+                                        userId: data?.userId ? data.userId + 1 : 1,
+                                        name: name,
+                                        phone: phone,
+                                        email: email,
+                                        encrypted_password: hashPassword(password, process.env.SALT || ''),
+                                    });
+                                    newUser
+                                        .save()
+                                        .then(user => res.status(OK).json({
+                                            message: "User Registered Successfully.",
+                                            data: user
+                                        }))
+                                        .catch(err => res.status(BAD_REQUEST).json({ message: err.message }));
+                                }).catch(err => loggerUtil(err))
                         }
                         else {
                             return res.status(BAD_REQUEST).json({ error: "Entered OTP is Invalid." })
