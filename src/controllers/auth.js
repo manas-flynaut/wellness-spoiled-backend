@@ -6,7 +6,6 @@ const { OK, WRONG_ENTITY, BAD_REQUEST, NOT_FOUND, UNAUTHORIZED, INTERNAL_SERVER_
 const User = require("../models/userModel")
 const { validationResult } = require('express-validator')
 const { hashPassword, authenticate } = require("../helpers/auth")
-const { response } = require("express")
 const dotenv = require('dotenv')
 dotenv.config()
 
@@ -64,6 +63,7 @@ const signUp = async (req, res) => {
                                 .then((data) => {
                                     const newUser = new User({
                                         userId: data?.userId ? data.userId + 1 : 1,
+                                        userType: 1,
                                         name: name,
                                         phone: phone,
                                         email: email,
@@ -101,13 +101,42 @@ const login = async (req, res) => {
     }
     const { userName, password } = req.body
     try {
-        User.findOne({ email: userName }).then(user => {
-            if (!user) {
+        User.findOne({ email: userName }).then(userWithEmail => {
+            loggerUtil(userWithEmail)
+            if (userWithEmail) {
+                const userData = userWithEmail
+                if (
+                    !authenticate(
+                        password,
+                        process.env.SALT || '',
+                        userData.encrypted_password
+                    )
+                ) {
+                    return res.status(UNAUTHORIZED).json({
+                        error: 'Oops!, E-mail / Phone Number or Password is incorrect!'
+                    })
+                }
+                const expiryTime = new Date()
+                expiryTime.setMonth(expiryTime.getMonth() + 6)
+                const exp = expiryTime.getTime() / 1000
+                const token = jwt.sign(
+                    { _id: userData.id, exp: exp },
+                    process.env.SECRET || ''
+                )
+                res.cookie('Token', token, {
+                    expires: new Date(Date.now() + 900000),
+                    httpOnly: true
+                })
+                return res.status(OK).json({
+                    message: 'User Logged in Successfully!',
+                    token,
+                    data: userData
+                })
+            }
+            else {
                 User.findOne({ phone: userName }).then(userWithPhone => {
-                    if (!userWithPhone)
-                        return res.status(NOT_FOUND).json({ error: "User Not Fount." });
-                    else {
-                        const userData = user ? user : userWithPhone
+                    if (userWithPhone) {
+                        const userData = userWithPhone
                         if (
                             !authenticate(
                                 password,
@@ -136,6 +165,9 @@ const login = async (req, res) => {
                             data: userData
                         })
                     }
+                    else {
+                        return res.status(NOT_FOUND).json({ error: "User Not Fount." });
+                    }
                 })
             }
         })
@@ -156,12 +188,50 @@ const signout = (req, res) => {
 
 const forgotPassword = async (req, res) => {
     try {
-        res.status(OK).json(req.body)
+        const errors = validationResult(req) || []
+        if (!errors.isEmpty()) {
+            return res.status(WRONG_ENTITY).json({
+                error: errors.array()[0]?.msg
+            })
+        }
+        const { newPassword, confirmPassword, phone, otp } = req.body
+        try {
+            User.findOne({ phone: phone }).then(userWithPhone => {
+                if (userWithPhone) {
+                    twilio.verify.v2.services(twilioServiceSID)
+                        .verificationChecks
+                        .create({ to: `+${phone}`, code: otp })
+                        .then(verification_check => {
+                            if (verification_check.status === "approved") {
+                                if (newPassword === confirmPassword) {
+                                    User.findOneAndUpdate({ "_id": userWithPhone._id }, { encrypted_password: hashPassword(confirmPassword, process.env.SALT || ''), }, { new: true })
+                                        .then(updatedUser => res.status(OK).json({
+                                            message: "User Registered Successfully.",
+                                            data: updatedUser
+                                        }))
+                                        .catch(err => res.status(BAD_REQUEST).json({ message: err.message }));
+                                }
+                                else {
+                                    return res.status(BAD_REQUEST).json({ error: "The New Password and Confirmed Password are not Same." })
+                                }
+                            }
+                            else {
+                                return res.status(BAD_REQUEST).json({ error: "Entered OTP is Invalid." })
+                            }
+                        }).catch(err => res.status(err.status).json({ err }))
+                }
+                else {
+                    return res.status(NOT_FOUND).json({ error: "User Not Fount." });
+                }
+            }).catch()
+        } catch (err) {
+            res.status(BAD_REQUEST).json({ error: "Something went Wrong." })
+        }
     } catch (err) {
         loggerUtil(err, 'ERROR')
     } finally {
-        loggerUtil(`Sign up API called by user - ${req.body.email}`)
+        loggerUtil(`Forgot Password API Called.`)
     }
 }
 
-module.exports = { sendOtpRequest, signUp, login, signout, forgotPassword, }
+module.exports = { sendOtpRequest, signUp, login, signout, forgotPassword, }        

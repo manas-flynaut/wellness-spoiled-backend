@@ -2,6 +2,7 @@ const mongoose = require("mongoose")
 
 const userSchema = new mongoose.Schema({
     userId: { type: Number, required: [true, "Please add userId."] },
+    userType: { type: Number, required: [true, "Please add User - Type"] },
     name: { type: String, required: [true, "Please add Name."] },
     phone: { type: Number, unique: [true, "Phone Number already registered."], required: [true, "Please add Phone Number"] },
     email: { type: String, unique: [true, "Email already registered."], required: [true, "Please add Email."] },
