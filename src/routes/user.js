@@ -22,7 +22,7 @@ userRoute.get(
 
 userRoute.patch(
     '/user/block/:userId',
-    isAdmin,
+    isAdmin, 
     blockUser
 )
 
