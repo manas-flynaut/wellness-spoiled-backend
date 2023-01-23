@@ -1,18 +1,24 @@
-const expressJwt = require('express-jwt')
-const { SC } = require('../utils/statusCode')
+const { expressjwt: jwt } = require("express-jwt");
+const { UNAUTHORIZED, NOT_FOUND } = require('../utils/statusCode')
 const { loggerUtil } = require('./../utils/logger')
+const dotenv = require('dotenv')
+const User = require("../models/userModel")
 
-const isSignedIn = () => expressJwt({
-    secret: process.env.SECRET || '',
+dotenv.config()
+
+const isSignedIn = jwt({
+    secret: process.env.SECRET,
     algorithms: ['HS256', 'RS256'],
     userProperty: 'auth'
 })
 
-const isValidToken = (err, res, next) => {
+const isValidToken = (err, req, res, next) => {
     if (err.name === 'UnauthorizedError') {
-        return res.status(SC.UNAUTHORIZED).json({ error: 'Authentication Failed!' })
+        return res
+            .status(UNAUTHORIZED)
+            .json({ error: 'Authentication Failed!' })
     }
-    return next()
+    next()
 }
 
 const isAuthenticated = (
@@ -33,61 +39,40 @@ const isAdmin = async (req, res, next) => {
     const authId = req.auth._id
 
     if (authId) {
-        await prisma.user
-            .findFirst({
-                where: {
-                    id: authId
-                }
-            })
-            .then(user => {
-                if (!user) {
-                    return res.status(SC.NOT_FOUND).json({
-                        error: 'No user was found in DB!'
-                    })
-                }
-                if (user.role === 3) {
-                    return next()
-                }
-                return res.status(SC.UNAUTHORIZED).json({
+        User.findById(authId).exec((err, user) => {
+            if (err || !user) {
+                return res.status(NOT_FOUND).json({
+                    error: 'No user was found in DB!'
+                })
+            }
+            if (user.role === 3) {
+                next()
+            } else {
+                res.status(UNAUTHORIZED).json({
                     error: 'Not an admin!'
                 })
-            })
-            .catch(err => {
-                loggerUtil(err, 'ERROR')
-            })
+            }
+        })
     }
 }
 
-const isSameUserOrAdmin = async (
-    req,
-    res,
-    next
-) => {
+const isSameUserOrAdmin = async (req, res, next) => {
     const authId = req.auth._id
-    const userId = req.params.userId
     if (authId) {
-        await prisma.user
-            .findFirst({
-                where: {
-                    id: authId
-                }
-            })
-            .then(user => {
-                if (!user) {
-                    return res.status(SC.NOT_FOUND).json({
-                        error: 'No user was found in DB!'
-                    })
-                }
-                if (authId === +userId || user.role === 3) {
-                    return next()
-                }
-                return res.status(SC.UNAUTHORIZED).json({
-                    error: 'Not the same user or an admin!'
+        User.findById(authId).exec((err, user) => {
+            if (err || !user) {
+                return res.status(NOT_FOUND).json({
+                    error: 'No user was found in DB!'
                 })
-            })
-            .catch(err => {
-                loggerUtil(err, 'ERROR')
-            })
+            }
+            if (user.role === 3 || `${user._id}` === authId._id) {
+                next()
+            } else {
+                res.status(UNAUTHORIZED).json({
+                    error: 'Not an admin or Same as Logged in User'
+                })
+            }
+        })
     }
 }
 
