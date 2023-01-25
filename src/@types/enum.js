@@ -8,3 +8,9 @@ export const Gender = {
 	MALE: 1,
 	FEMALE: 2,
 }
+
+export const userStatus = {
+	Active: 1,
+	Suspend: 2,
+	Deleted: 3
+}
