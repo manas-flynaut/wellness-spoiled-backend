@@ -2,7 +2,7 @@
 const express = require('express')
 const { check, body } = require('express-validator')
 const { isSignedIn, isValidToken, isAdmin } = require('./../middleware/index')
-const { signUp, signout, login, forgotPassword, sendOtpRequest } = require('../controllers/auth')
+const { signUp, signout, login, adminLogin, forgotPassword, sendOtpRequest } = require('../controllers/auth')
 
 const authRoute = express.Router()
 
@@ -54,6 +54,17 @@ authRoute.post(
             .withMessage('Password length should be minimum of 8 characters')
     ],
     login
+)
+
+authRoute.post(
+    '/adminLogin',
+    [
+        check('userName').isLength({ min: 3 }).withMessage('Please provide a valid Email / Phone Number.'),
+        check('password')
+            .isLength({ min: 4 })
+            .withMessage('Password length should be minimum of 4 characters')
+    ],
+    adminLogin
 )
 
 authRoute.get('/signout', signout)

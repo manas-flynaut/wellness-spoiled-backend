@@ -201,6 +201,93 @@ const login = async (req, res) => {
     }
 }
 
+const adminLogin = async (req, res) => {
+    const errors = validationResult(req) || []
+    if (!errors.isEmpty()) {
+        return res.status(WRONG_ENTITY).json({
+            error: errors.array()[0]?.msg
+        })
+    }
+    const { userName, password } = req.body
+    try {
+        User.findOne({ email: userName }).then(userWithEmail => {
+            loggerUtil(userWithEmail)
+            if (userWithEmail) {
+                const userData = userWithEmail
+                if (
+                    !authenticate(
+                        password,
+                        process.env.SALT || '',
+                        userData.encrypted_password
+                    )
+                ) {
+                    return res.status(UNAUTHORIZED).json({
+                        error: 'Oops!, E-mail / Phone Number or Password is incorrect!'
+                    })
+                }
+                const expiryTime = new Date()
+                expiryTime.setMonth(expiryTime.getMonth() + 6)
+                const exp = expiryTime.getTime() / 1000
+                const token = jwt.sign(
+                    { _id: userData.id, exp: exp },
+                    process.env.SECRET || ''
+                )
+                res.cookie('Token', token, {
+                    expires: new Date(Date.now() + 900000),
+                    httpOnly: true
+                })
+                return res.status(OK).json({
+                    message: 'User Logged in Successfully!',
+                    token,
+                    data: userData
+                })
+            }
+            else {
+                User.findOne({ phone: userName }).then(userWithPhone => {
+                    if (userWithPhone) {
+                        const userData = userWithPhone
+                        if (
+                            !authenticate(
+                                password,
+                                process.env.SALT || '',
+                                userData.encrypted_password
+                            )
+                        ) {
+                            return res.status(UNAUTHORIZED).json({
+                                error: 'Oops!, E-mail / Phone Number or Password is incorrect!'
+                            })
+                        }
+                        const expiryTime = new Date()
+                        expiryTime.setMonth(expiryTime.getMonth() + 6)
+                        const exp = expiryTime.getTime() / 1000
+                        const token = jwt.sign(
+                            { _id: userData.id, exp: exp },
+                            process.env.SECRET || ''
+                        )
+                        res.cookie('Token', token, {
+                            expires: new Date(Date.now() + 900000),
+                            httpOnly: true
+                        })
+                        return res.status(OK).json({
+                            message: 'User Logged in Successfully!',
+                            token,
+                            data: userData
+                        })
+                    }
+                    else {
+                        return res.status(NOT_FOUND).json({ error: "User Not Fount." });
+                    }
+                })
+            }
+        })
+        // res.status(OK).json(req.body)
+    } catch (err) {
+        loggerUtil(err, 'ERROR')
+    } finally {
+        loggerUtil(`Sign up API called by user - UserName: -${req.body.userName}`)
+    }
+}
+
 const signout = (req, res) => {
     res.clearCookie('Token')
     res.status(OK).json({
@@ -256,4 +343,4 @@ const forgotPassword = async (req, res) => {
     }
 }
 
-module.exports = { sendOtpRequest, signUp, login, signout, forgotPassword, }        
+module.exports = { sendOtpRequest, signUp, login, adminLogin, signout, forgotPassword, }        
