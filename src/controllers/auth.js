@@ -221,8 +221,9 @@ const adminLogin = async (req, res) => {
                         userData.encrypted_password
                     )
                 ) {
-                    return res.status(UNAUTHORIZED).json({
-                        error: 'Oops!, E-mail / Phone Number or Password is incorrect!'
+                    return res.status(OK).json({
+                        error: 'Oops!, E-mail / Phone Number or Password is incorrect!',
+                        data: {}
                     })
                 }
                 if(userWithEmail.role != 3){
