@@ -225,6 +225,12 @@ const adminLogin = async (req, res) => {
                         error: 'Oops!, E-mail / Phone Number or Password is incorrect!'
                     })
                 }
+                if(userWithEmail.role != 3){
+                    return res.status(OK).json({
+                        error: "You can not login.",
+                        data: {}
+                    })
+                }
                 const expiryTime = new Date()
                 expiryTime.setMonth(expiryTime.getMonth() + 6)
                 const exp = expiryTime.getTime() / 1000
@@ -243,42 +249,48 @@ const adminLogin = async (req, res) => {
                 })
             }
             else {
-                User.findOne({ phone: userName }).then(userWithPhone => {
-                    if (userWithPhone) {
-                        const userData = userWithPhone
-                        if (
-                            !authenticate(
-                                password,
-                                process.env.SALT || '',
-                                userData.encrypted_password
-                            )
-                        ) {
-                            return res.status(UNAUTHORIZED).json({
-                                error: 'Oops!, E-mail / Phone Number or Password is incorrect!'
-                            })
-                        }
-                        const expiryTime = new Date()
-                        expiryTime.setMonth(expiryTime.getMonth() + 6)
-                        const exp = expiryTime.getTime() / 1000
-                        const token = jwt.sign(
-                            { _id: userData.id, exp: exp },
-                            process.env.SECRET || ''
-                        )
-                        res.cookie('Token', token, {
-                            expires: new Date(Date.now() + 900000),
-                            httpOnly: true
-                        })
-                        return res.status(OK).json({
-                            message: 'User Logged in Successfully!',
-                            token,
-                            data: userData
-                        })
-                    }
-                    else {
-                        return res.status(NOT_FOUND).json({ error: "User Not Fount." });
-                    }
+                return res.status(OK).json({
+                    error: "User Not Fount.",
+                    data: {}
                 })
             }
+            // else {
+            //     User.findOne({ phone: userName }).then(userWithPhone => {
+            //         if (userWithPhone) {
+            //             const userData = userWithPhone
+            //             if (
+            //                 !authenticate(
+            //                     password,
+            //                     process.env.SALT || '',
+            //                     userData.encrypted_password
+            //                 )
+            //             ) {
+            //                 return res.status(UNAUTHORIZED).json({
+            //                     error: 'Oops!, E-mail / Phone Number or Password is incorrect!'
+            //                 })
+            //             }
+            //             const expiryTime = new Date()
+            //             expiryTime.setMonth(expiryTime.getMonth() + 6)
+            //             const exp = expiryTime.getTime() / 1000
+            //             const token = jwt.sign(
+            //                 { _id: userData.id, exp: exp },
+            //                 process.env.SECRET || ''
+            //             )
+            //             res.cookie('Token', token, {
+            //                 expires: new Date(Date.now() + 900000),
+            //                 httpOnly: true
+            //             })
+            //             return res.status(OK).json({
+            //                 message: 'User Logged in Successfully!',
+            //                 token,
+            //                 data: userData
+            //             })
+            //         }
+            //         else {
+            //             return res.status(NOT_FOUND).json({ error: "User Not Fount." });
+            //         }
+            //     })
+            // }
         })
         // res.status(OK).json(req.body)
     } catch (err) {
