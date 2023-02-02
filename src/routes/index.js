@@ -3,6 +3,7 @@ const {isSignedIn , isValidToken} = require("../middleware/index")
 const auth = require("./auth")
 const userRoute = require("./user")
 const roleRoute = require("./role")
+const adminRoute = require("./admin")
 
 const routes = (app) => {
     // Test Route for API
@@ -14,6 +15,7 @@ const routes = (app) => {
     app.use("/api/v1" , auth)
     app.use('/api/v1', isSignedIn, isValidToken, userRoute)
     app.use('/api/v1', isSignedIn, isValidToken, roleRoute)
+    app.use('/api/v1', isSignedIn, isValidToken, adminRoute)
 
     return app
 }

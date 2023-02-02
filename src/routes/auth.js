@@ -59,6 +59,17 @@ authRoute.post(
     login
 )
 
+authRoute.post(
+    '/adminLogin',
+    [
+        check('userName').isLength({ min: 3 }).withMessage('Please provide a valid Email / Phone Number.'),
+        check('password')
+            .isLength({ min: 4 })
+            .withMessage('Password length should be minimum of 4 characters')
+    ],
+    adminLogin
+)
+
 authRoute.get('/signout', signout)
 
 authRoute.post('/forgot-password',

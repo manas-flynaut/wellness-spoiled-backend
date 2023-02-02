@@ -8,6 +8,7 @@ const cors = require("cors");
 const dotenv = require('dotenv')
 const { loggerUtil } = require('./utils/logger');
 const app = express();
+const bodyParser = require("body-parser");
 const routes = require("./routes/index")
 
 // Setting Up App to use data from .env file
@@ -15,7 +16,9 @@ dotenv.config()
 
 app.use(cors())
 app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
+app.use(express.urlencoded({ extended: false }))
+app.use(bodyParser.json());
+app.use(express.static(__dirname));
 
 // Routes for the app
 routes(app)
