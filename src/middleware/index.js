@@ -58,17 +58,20 @@ const isAdmin = async (req, res, next) => {
 
 const isSameUserOrAdmin = async (req, res, next) => {
     const authId = req.auth._id
+    const userId = req.params.userId
     if (authId) {
         User.findById(authId).exec((err, user) => {
             if (err || !user) {
                 return res.status(NOT_FOUND).json({
+                    status: NOT_FOUND,
                     error: 'No user was found in DB!'
                 })
             }
-            if (user.role === 3 || `${user._id}` === authId._id) {
+            if (user.role === 3 || user.userId == userId) {
                 next()
             } else {
                 res.status(UNAUTHORIZED).json({
+                    status: UNAUTHORIZED,
                     error: 'Not an admin or Same as Logged in User'
                 })
             }

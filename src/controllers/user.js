@@ -1,6 +1,6 @@
 const User = require("../models/userModel")
 const { loggerUtil } = require("../utils/logger")
-const { OK, NOT_FOUND } = require("../utils/statusCode")
+const { OK, NOT_FOUND, BAD_REQUEST } = require("../utils/statusCode")
 
 const getUserById = async (req, res) => {
     try {
@@ -51,20 +51,24 @@ const getAllUsers = async (req, res) => {
     }
 }
 
-const blockUser = async (req, res) => {
+const updateUserById = async (req, res) => {
     try {
         const id = req.params
-        User.findOneAndUpdate({ "userId": uid }, { blocked: req.body.block }, { new: true })
+        User.findOneAndUpdate( id, req.body, { new: true })
             .then(updatedUser => res.status(OK).json({
-                message: "Block Status of User updated Successfully.",
+                status: OK,
+                message: "User profile data successfully updated.",
                 data: updatedUser
             }))
-            .catch(err => res.status(BAD_REQUEST).json({ message: err.message }));
+            .catch(err => res.status(BAD_REQUEST).json({
+                status: BAD_REQUEST,
+                message: err.message
+            }));
     } catch (err) {
         loggerUtil(err, 'ERROR')
     } finally {
-        loggerUtil('Block User By Id Function is Executed!')
+        loggerUtil('Get User By Id Function is Executed!')
     }
 }
 
-module.exports = { getUserById, getAllUsers, blockUser }
+module.exports = { getUserById, getAllUsers, updateUserById }
