@@ -2,7 +2,7 @@
 const express = require('express')
 const { check, body } = require('express-validator')
 const { isSignedIn, isValidToken, isSameUserOrAdmin } = require('./../middleware/index')
-const { signUp, signout, login, forgotPassword, sendOtpRequest, changePassword } = require('../controllers/auth')
+const { signUp, signout, login, adminLogin, forgotPassword, sendOtpRequest, changePassword } = require('../controllers/auth')
 
 const authRoute = express.Router()
 

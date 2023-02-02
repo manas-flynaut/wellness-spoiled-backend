@@ -270,7 +270,7 @@ const adminLogin = async (req, res) => {
                         data: {}
                     })
                 }
-                if(userWithEmail.role != 3){
+                if (userWithEmail.role != 3) {
                     return res.status(OK).json({
                         error: "You can not login.",
                         data: {}
@@ -489,4 +489,4 @@ const changePassword = async (req, res) => {
     }
 }
 
-module.exports = { sendOtpRequest, signUp, login, signout, forgotPassword, changePassword }        
+module.exports = { sendOtpRequest, signUp, login, adminLogin, signout, forgotPassword, changePassword }        
