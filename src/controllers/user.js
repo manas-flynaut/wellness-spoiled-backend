@@ -1,6 +1,6 @@
 const User = require("../models/userModel")
 const { loggerUtil } = require("../utils/logger")
-const { OK, NOT_FOUND, BAD_REQUEST } = require("../utils/statusCode")
+const { OK, NOT_FOUND, BAD_REQUEST, INTERNAL_SERVER_ERROR } = require("../utils/statusCode")
 
 const getUserById = async (req, res) => {
     try {
@@ -30,12 +30,16 @@ const getUserById = async (req, res) => {
 
 const getAllUsers = async (req, res) => {
     try {
+        const limit = req.query.limit || 10
+        const skip = req.query.skip || 0
         User
             .find({}, { salt: 0, encrypted_password: 0, profilePhoto: 0 })
+            .limit(limit)
+            .skip(limit * skip)
             .sort({ createdAt: -1 })
             .exec((err, user) => {
                 if (err || !user) {
-                    return res.status(SC.NOT_FOUND).json({
+                    return res.status(NOT_FOUND).json({
                         error: 'No users were found in a DB!'
                     })
                 }
@@ -54,7 +58,7 @@ const getAllUsers = async (req, res) => {
 const updateUserById = async (req, res) => {
     try {
         const id = req.params
-        User.findOneAndUpdate( id, req.body, { new: true })
+        User.findOneAndUpdate(id, req.body, { new: true })
             .then(updatedUser => res.status(OK).json({
                 status: OK,
                 message: "User profile data successfully updated.",
@@ -71,4 +75,40 @@ const updateUserById = async (req, res) => {
     }
 }
 
-module.exports = { getUserById, getAllUsers, updateUserById }
+const addOnboardingQuestions = async (req, res) => {
+    const id = req.auth._id
+    let result = req.body
+    try {
+        User.findOne({ _id: id }).exec((err, data) => {
+            if (err || !data) {
+                return res.status(NOT_FOUND).json({
+                    error: 'User Not Found!'
+                })
+            }
+            User
+                .updateOne(
+                    { _id: id },
+                    {
+                        $push: { onboardingQuestions: result }
+                    }
+                )
+                .then(() => {
+                    res.status(OK).json({
+                        message: 'Questions Added Successfully!'
+                    })
+                })
+                .catch((err) => {
+                    res.status(INTERNAL_SERVER_ERROR).json({
+                        error: 'User Updation Failed!'
+                    })
+                    loggerUtil(err, 'ERROR')
+                })
+        })
+    } catch (err) {
+        loggerUtil(err, 'ERROR')
+    } finally {
+        loggerUtil('Add Onboarding Questions Function is Executed')
+    }
+}
+
+module.exports = { getUserById, getAllUsers, updateUserById, addOnboardingQuestions }

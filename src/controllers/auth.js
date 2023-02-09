@@ -6,6 +6,7 @@ const { OK, WRONG_ENTITY, BAD_REQUEST, NOT_FOUND, UNAUTHORIZED, INTERNAL_SERVER_
 const User = require("../models/userModel")
 const { validationResult } = require('express-validator')
 const { hashPassword, authenticate } = require("../helpers/auth")
+const { addNotification } = require("./notification")
 const dotenv = require('dotenv')
 dotenv.config()
 
@@ -79,11 +80,14 @@ const signUp = async (req, res) => {
                             });
                             newUser
                                 .save()
-                                .then(user => res.status(OK).json({
-                                    status: OK,
-                                    message: "User Registered Successfully.",
-                                    data: user
-                                }))
+                                .then(user => {
+                                    addNotification(user._id, "You have successfully signed up.")
+                                    res.status(OK).json({
+                                        status: OK,
+                                        message: "User Registered Successfully.",
+                                        data: user
+                                    })
+                                })
                                 .catch(err => res.status(BAD_REQUEST).json({
                                     status: BAD_REQUEST,
                                     message: err.message
@@ -373,11 +377,14 @@ const forgotPassword = async (req, res) => {
                             if (verification_check.status === "approved") {
                                 if (newPassword === confirmPassword) {
                                     User.findOneAndUpdate({ "_id": userWithPhone._id }, { encrypted_password: hashPassword(confirmPassword, process.env.SALT || ''), }, { new: true })
-                                        .then(updatedUser => res.status(OK).json({
-                                            status: OK,
-                                            message: "Password Successfully Updated.",
-                                            data: updatedUser
-                                        }))
+                                        .then(updatedUser => {
+                                            addNotification(updatedUser._id, "Your Password was updated using OTP. If it was not you contact Admin")
+                                            res.status(OK).json({
+                                                status: OK,
+                                                message: "Password Successfully Updated.",
+                                                data: updatedUser
+                                            })
+                                        })
                                         .catch(err => res.status(BAD_REQUEST).json({
                                             status: BAD_REQUEST,
                                             message: err.message
@@ -459,11 +466,14 @@ const changePassword = async (req, res) => {
                     }
                     if (newPassword === confirmPassword) {
                         User.findOneAndUpdate({ "_id": user._id }, { encrypted_password: hashPassword(confirmPassword, process.env.SALT || ''), }, { new: true })
-                            .then(updatedUser => res.status(OK).json({
-                                status: OK,
-                                message: "Password Successfully Updated.",
-                                data: updatedUser
-                            }))
+                            .then(updatedUser => {
+                                addNotification(updatedUser._id, "Your Password was Changed. If it was not you contact Admin")
+                                res.status(OK).json({
+                                    status: OK,
+                                    message: "Password Successfully Updated.",
+                                    data: updatedUser
+                                })
+                            })
                             .catch(err => res.status(BAD_REQUEST).json({
                                 status: BAD_REQUEST,
                                 message: err.message

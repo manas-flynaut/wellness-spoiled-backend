@@ -64,7 +64,7 @@ const isSameUserOrAdmin = async (req, res, next) => {
             if (err || !user) {
                 return res.status(NOT_FOUND).json({
                     status: NOT_FOUND,
-                    error: 'No user was found in DB!'
+                    error: 'No User Found!'
                 })
             }
             if (user.role === 3 || user.userId == userId) {
