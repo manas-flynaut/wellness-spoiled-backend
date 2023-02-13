@@ -1,5 +1,5 @@
 const express = require('express');
-const { getReminderOfUser } = require('../controllers/reminder');
+const { getReminderOfUser, addReminderForUser } = require('../controllers/reminder');
 const { isSameUserOrAdmin } = require('../middleware');
 
 const reminderRoute = express.Router()
