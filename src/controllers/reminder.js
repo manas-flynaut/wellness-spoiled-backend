@@ -44,7 +44,7 @@ const getReminderOfUser = async (req, res) => {
     }
 }
 
-const addReminder = async (req,res) => {
+const addReminderForUser = async (req,res) => {
     const newNotification = new Notification({
         user: userId,
         description: description
@@ -56,4 +56,4 @@ const addReminder = async (req,res) => {
 
 
 
-module.exports = { getReminderOfUser, }
+module.exports = { getReminderOfUser, addReminderForUser}
