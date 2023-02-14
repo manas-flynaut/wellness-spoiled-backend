@@ -6,6 +6,7 @@ const { OK, WRONG_ENTITY, BAD_REQUEST, NOT_FOUND, UNAUTHORIZED, INTERNAL_SERVER_
 const User = require("../models/userModel")
 const { validationResult } = require('express-validator')
 const { hashPassword, authenticate } = require("../helpers/auth")
+const { addNotification } = require("./notification")
 const dotenv = require('dotenv')
 dotenv.config()
 
@@ -18,6 +19,7 @@ const sendOtpRequest = async (req, res) => {
     const errors = validationResult(req) || []
     if (!errors.isEmpty()) {
         return res.status(WRONG_ENTITY).json({
+            status: WRONG_ENTITY,
             error: errors.array()[0]?.msg
         })
     }
@@ -27,9 +29,15 @@ const sendOtpRequest = async (req, res) => {
             .verifications
             .create({ to: `+${countryCode}${phone}`, channel: 'sms' })
             .then(verification => res.status(OK).json({
+                status: OK,
                 message: "OTP send Successfully.",
                 data: verification
-            })).catch(err => res.status(err.status).json({ err }))
+            })).catch(err => {
+                res.status(err.status).json({
+                    status: err.status,
+                    err: { err },
+                })
+            })
     }
     catch (err) {
         loggerUtil(err)
@@ -43,14 +51,18 @@ const signUp = async (req, res) => {
     const errors = validationResult(req) || []
     if (!errors.isEmpty()) {
         return res.status(WRONG_ENTITY).json({
+            status: WRONG_ENTITY,
             error: errors.array()[0]?.msg
         })
     }
-    const { name, phone, email, password, otp } = req.body
+    const { name, countryCode, phone, email, password, otp } = req.body
     try {
-        User.find({ "$or": [ { email: email }, { phone: phone} ] }).then(user => {
+        User.find({ "$or": [{ email: email }, { phone: phone }] }).then(user => {
             if (user.length !== 0) {
-                return res.status(BAD_REQUEST).json({ error: "Email or Phone Number already registered." });
+                return res.status(BAD_REQUEST).json({
+                    status: BAD_REQUEST,
+                    error: "Email or Phone Number already registered."
+                });
             } else {
                 if (otp === "1234") {
                     User
@@ -61,22 +73,30 @@ const signUp = async (req, res) => {
                                 userId: data?.userId ? data.userId + 1 : 1,
                                 role: 1,
                                 name: name,
+                                countryCode: countryCode,
                                 phone: phone,
                                 email: email,
                                 encrypted_password: hashPassword(password, process.env.SALT || ''),
                             });
                             newUser
                                 .save()
-                                .then(user => res.status(OK).json({
-                                    message: "User Registered Successfully.",
-                                    data: user
-                                }))
-                                .catch(err => res.status(BAD_REQUEST).json({ message: err.message }));
+                                .then(user => {
+                                    addNotification(user._id, "You have successfully signed up.")
+                                    res.status(OK).json({
+                                        status: OK,
+                                        message: "User Registered Successfully.",
+                                        data: user
+                                    })
+                                })
+                                .catch(err => res.status(BAD_REQUEST).json({
+                                    status: BAD_REQUEST,
+                                    message: err.message
+                                }));
                         }).catch(err => loggerUtil(err))
                 }
                 twilio.verify.v2.services(twilioServiceSID)
                     .verificationChecks
-                    .create({ to: `+${phone}`, code: otp })
+                    .create({ to: `+${countryCode}${phone}`, code: otp })
                     .then(verification_check => {
                         if (verification_check.status === "approved") {
                             User
@@ -87,6 +107,7 @@ const signUp = async (req, res) => {
                                         userId: data?.userId ? data.userId + 1 : 1,
                                         role: 1,
                                         name: name,
+                                        countryCode: countryCode,
                                         phone: phone,
                                         email: email,
                                         encrypted_password: hashPassword(password, process.env.SALT || ''),
@@ -94,18 +115,33 @@ const signUp = async (req, res) => {
                                     newUser
                                         .save()
                                         .then(user => res.status(OK).json({
+                                            status: OK,
                                             message: "User Registered Successfully.",
                                             data: user
                                         }))
-                                        .catch(err => res.status(BAD_REQUEST).json({ message: err.message }));
+                                        .catch(err => res.status(BAD_REQUEST).json({
+                                            status: BAD_REQUEST,
+                                            message: err.message
+                                        }));
                                 }).catch(err => loggerUtil(err))
                         }
                         else {
-                            return res.status(BAD_REQUEST).json({ error: "Entered OTP is Invalid." })
+                            return res.status(BAD_REQUEST).json({
+                                status: BAD_REQUEST,
+                                error: "Entered OTP is Invalid."
+                            })
                         }
-                    }).catch(err => res.status(err.status).json({ err }))
+                    }).catch(err => res.status(err.status).json({
+                        status: err.status,
+                        error: { err }
+                    }))
             }
-        }).catch((err) => { return res.status(INTERNAL_SERVER_ERROR).json({ error: err }) })
+        }).catch((err) => {
+            return res.status(INTERNAL_SERVER_ERROR).json({
+                status: INTERNAL_SERVER_ERROR,
+                error: err
+            })
+        })
 
     } catch (err) {
         loggerUtil(err, 'ERROR')
@@ -116,16 +152,23 @@ const signUp = async (req, res) => {
 
 const login = async (req, res) => {
     const errors = validationResult(req) || []
+    loggerUtil(req.body)
     if (!errors.isEmpty()) {
         return res.status(WRONG_ENTITY).json({
+            status: WRONG_ENTITY,
             error: errors.array()[0]?.msg
         })
     }
     const { userName, password } = req.body
     try {
-        User.findOne({ email: userName }).then(userWithEmail => {
-            loggerUtil(userWithEmail)
-            if (userWithEmail) {
+        if (typeof userName === "string") {
+            User.findOne({ email: userName }).then(userWithEmail => {
+                if (!userWithEmail) {
+                    return res.status(NOT_FOUND).json({
+                        status: NOT_FOUND,
+                        error: "User Not Fount."
+                    });
+                }
                 const userData = userWithEmail
                 if (
                     !authenticate(
@@ -135,6 +178,7 @@ const login = async (req, res) => {
                     )
                 ) {
                     return res.status(UNAUTHORIZED).json({
+                        status: UNAUTHORIZED,
                         error: 'Oops!, E-mail / Phone Number or Password is incorrect!'
                     })
                 }
@@ -150,50 +194,54 @@ const login = async (req, res) => {
                     httpOnly: true
                 })
                 return res.status(OK).json({
+                    status: OK,
                     message: 'User Logged in Successfully!',
                     token,
                     data: userData
                 })
             }
-            else {
-                User.findOne({ phone: userName }).then(userWithPhone => {
-                    if (userWithPhone) {
-                        const userData = userWithPhone
-                        if (
-                            !authenticate(
-                                password,
-                                process.env.SALT || '',
-                                userData.encrypted_password
-                            )
-                        ) {
-                            return res.status(UNAUTHORIZED).json({
-                                error: 'Oops!, E-mail / Phone Number or Password is incorrect!'
-                            })
-                        }
-                        const expiryTime = new Date()
-                        expiryTime.setMonth(expiryTime.getMonth() + 6)
-                        const exp = expiryTime.getTime() / 1000
-                        const token = jwt.sign(
-                            { _id: userData.id, exp: exp },
-                            process.env.SECRET || ''
-                        )
-                        res.cookie('Token', token, {
-                            expires: new Date(Date.now() + 900000),
-                            httpOnly: true
-                        })
-                        return res.status(OK).json({
-                            message: 'User Logged in Successfully!',
-                            token,
-                            data: userData
-                        })
-                    }
-                    else {
-                        return res.status(NOT_FOUND).json({ error: "User Not Fount." });
-                    }
+            )
+        }
+        else {
+            User.findOne({ phone: userName }).then(userWithPhone => {
+                if (!userWithPhone) {
+                    return res.status(NOT_FOUND).json({
+                        status: NOT_FOUND,
+                        error: "User Not Fount."
+                    });
+                }
+                const userData = userWithPhone
+                if (
+                    !authenticate(
+                        password,
+                        process.env.SALT || '',
+                        userData.encrypted_password
+                    )
+                ) {
+                    return res.status(UNAUTHORIZED).json({
+                        status: UNAUTHORIZED,
+                        error: 'Oops!, E-mail / Phone Number or Password is incorrect!'
+                    })
+                }
+                const expiryTime = new Date()
+                expiryTime.setMonth(expiryTime.getMonth() + 6)
+                const exp = expiryTime.getTime() / 1000
+                const token = jwt.sign(
+                    { _id: userData.id, exp: exp },
+                    process.env.SECRET || ''
+                )
+                res.cookie('Token', token, {
+                    expires: new Date(Date.now() + 900000),
+                    httpOnly: true
                 })
-            }
-        })
-        // res.status(OK).json(req.body)
+                return res.status(OK).json({
+                    status: OK,
+                    message: 'User Logged in Successfully!',
+                    token,
+                    data: userData
+                })
+            })
+        }
     } catch (err) {
         loggerUtil(err, 'ERROR')
     } finally {
@@ -226,7 +274,7 @@ const adminLogin = async (req, res) => {
                         data: {}
                     })
                 }
-                if(userWithEmail.role != 3){
+                if (userWithEmail.role != 3) {
                     return res.status(OK).json({
                         error: "You can not login.",
                         data: {}
@@ -304,6 +352,7 @@ const adminLogin = async (req, res) => {
 const signout = (req, res) => {
     res.clearCookie('Token')
     res.status(OK).json({
+        status: OK,
         message: 'User Signed Out Sucessfully!'
     })
 }
@@ -313,41 +362,64 @@ const forgotPassword = async (req, res) => {
         const errors = validationResult(req) || []
         if (!errors.isEmpty()) {
             return res.status(WRONG_ENTITY).json({
+                status: WRONG_ENTITY,
                 error: errors.array()[0]?.msg
             })
         }
-        const { newPassword, confirmPassword, phone, otp } = req.body
+        const { newPassword, confirmPassword, countryCode, phone, otp } = req.body
         try {
             User.findOne({ phone: phone }).then(userWithPhone => {
                 if (userWithPhone) {
                     twilio.verify.v2.services(twilioServiceSID)
                         .verificationChecks
-                        .create({ to: `+${phone}`, code: otp })
+                        .create({ to: `+${countryCode}${phone}`, code: otp })
                         .then(verification_check => {
                             if (verification_check.status === "approved") {
                                 if (newPassword === confirmPassword) {
                                     User.findOneAndUpdate({ "_id": userWithPhone._id }, { encrypted_password: hashPassword(confirmPassword, process.env.SALT || ''), }, { new: true })
-                                        .then(updatedUser => res.status(OK).json({
-                                            message: "Password Successfully Updated.",
-                                            data: updatedUser
-                                        }))
-                                        .catch(err => res.status(BAD_REQUEST).json({ message: err.message }));
+                                        .then(updatedUser => {
+                                            addNotification(updatedUser._id, "Your Password was updated using OTP. If it was not you contact Admin")
+                                            res.status(OK).json({
+                                                status: OK,
+                                                message: "Password Successfully Updated.",
+                                                data: updatedUser
+                                            })
+                                        })
+                                        .catch(err => res.status(BAD_REQUEST).json({
+                                            status: BAD_REQUEST,
+                                            message: err.message
+                                        }));
                                 }
                                 else {
-                                    return res.status(BAD_REQUEST).json({ error: "The New Password and Confirmed Password are not Same." })
+                                    return res.status(BAD_REQUEST).json({
+                                        status: BAD_REQUEST,
+                                        error: "The New Password and Confirmed Password are not Same."
+                                    })
                                 }
                             }
                             else {
-                                return res.status(BAD_REQUEST).json({ error: "Entered OTP is Invalid." })
+                                return res.status(BAD_REQUEST).json({
+                                    status: BAD_REQUEST,
+                                    error: "Entered OTP is Invalid."
+                                })
                             }
-                        }).catch(err => res.status(err.status).json({ err }))
+                        }).catch(err => res.status(err.status).json({
+                            status: err.status,
+                            error: { err }
+                        }))
                 }
                 else {
-                    return res.status(NOT_FOUND).json({ error: "User Not Fount." });
+                    return res.status(NOT_FOUND).json({
+                        status: NOT_FOUND,
+                        error: "User Not Fount."
+                    });
                 }
             }).catch()
         } catch (err) {
-            res.status(BAD_REQUEST).json({ error: "Something went Wrong." })
+            res.status(BAD_REQUEST).json({
+                status: BAD_REQUEST,
+                error: "Something went Wrong."
+            })
         }
     } catch (err) {
         loggerUtil(err, 'ERROR')
@@ -356,4 +428,75 @@ const forgotPassword = async (req, res) => {
     }
 }
 
-module.exports = { sendOtpRequest, signUp, login, adminLogin, signout, forgotPassword, }        
+const changePassword = async (req, res) => {
+    try {
+        const errors = validationResult(req) || []
+        if (!errors.isEmpty()) {
+            return res.status(WRONG_ENTITY).json({
+                status: WRONG_ENTITY,
+                error: errors.array()[0]?.msg
+            })
+        }
+        const { oldPassword, newPassword, confirmPassword } = req.body
+        try {
+            const id = req.params
+            if (oldPassword === newPassword) {
+                return res.status(BAD_REQUEST).json({
+                    status: BAD_REQUEST,
+                    error: 'Old Password and New Password cannot be same.'
+                })
+            }
+            User
+                .findOne(
+                    id,
+                    { salt: 0, __v: 0, profilePhoto: 0 }
+                )
+                .exec((err, user) => {
+                    if (err || !user) {
+                        return res.status(NOT_FOUND).json({
+                            status: NOT_FOUND,
+                            error: 'No user was found in DB!'
+                        })
+                    }
+                    if (!authenticate(oldPassword, process.env.SALT || '', user.encrypted_password)) {
+                        return res.status(UNAUTHORIZED).json({
+                            status: UNAUTHORIZED,
+                            error: 'Provided Password is incorrect!'
+                        })
+                    }
+                    if (newPassword === confirmPassword) {
+                        User.findOneAndUpdate({ "_id": user._id }, { encrypted_password: hashPassword(confirmPassword, process.env.SALT || ''), }, { new: true })
+                            .then(updatedUser => {
+                                addNotification(updatedUser._id, "Your Password was Changed. If it was not you contact Admin")
+                                res.status(OK).json({
+                                    status: OK,
+                                    message: "Password Successfully Updated.",
+                                    data: updatedUser
+                                })
+                            })
+                            .catch(err => res.status(BAD_REQUEST).json({
+                                status: BAD_REQUEST,
+                                message: err.message
+                            }));
+                    }
+                    else {
+                        return res.status(BAD_REQUEST).json({
+                            status: BAD_REQUEST,
+                            error: "The New Password and Confirmed Password are not Same."
+                        })
+                    }
+                })
+        } catch (err) {
+            res.status(BAD_REQUEST).json({
+                status: BAD_REQUEST,
+                error: "Something went Wrong."
+            })
+        }
+    } catch (err) {
+        loggerUtil(err, 'ERROR')
+    } finally {
+        loggerUtil(`Change Password API Called.`)
+    }
+}
+
+module.exports = { sendOtpRequest, signUp, login, adminLogin, signout, forgotPassword, changePassword }        
