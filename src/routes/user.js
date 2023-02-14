@@ -4,7 +4,7 @@ const { check } = require('express-validator')
 const { isAdmin, isSameUserOrAdmin } = require('../middleware')
 const { loggerUtil } = require('./../utils/logger')
 const User = require("../models/userModel")
-const { getUserById, getAllUsers, updateUserById, addOnboardingQuestions } = require('../controllers/user')
+const { getUserById, getAllUsers, updateUserById, addOnboardingQuestions, userAction } = require('../controllers/user')
 
 const userRoute = express.Router()
 
@@ -31,5 +31,11 @@ userRoute.put('/user/update/questions/:userId',
     addOnboardingQuestions
 )
 
+
+// userRoute.patch(
+//     '/user/action/:userId',
+//     isAdmin, 
+//     userAction
+// )
 
 module.exports = userRoute
