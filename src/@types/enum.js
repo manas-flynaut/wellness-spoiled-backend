@@ -14,3 +14,9 @@ export const userStatus = {
 	Suspend: 2,
 	Deleted: 3
 }
+
+export const reminderType = {
+	supplements_meds: 1,
+	appointment: 2,
+	self_care: 3
+}
