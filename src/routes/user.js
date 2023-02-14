@@ -4,7 +4,7 @@ const { check } = require('express-validator')
 const { isAdmin, isSameUserOrAdmin } = require('../middleware')
 const { loggerUtil } = require('./../utils/logger')
 const User = require("../models/userModel")
-const { getUserById, getAllUsers, blockUser } = require('../controllers/user')
+const { getUserById, getAllUsers, blockUser, userAction } = require('../controllers/user')
 
 const userRoute = express.Router()
 
@@ -25,5 +25,11 @@ userRoute.patch(
     isAdmin, 
     blockUser
 )
+
+// userRoute.patch(
+//     '/user/action/:userId',
+//     isAdmin, 
+//     userAction
+// )
 
 module.exports = userRoute
