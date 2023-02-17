@@ -1,31 +1,31 @@
-const Reminder = require('../models/reminderModal');
+const CareNotes = require('../models/careNotes');
 const User = require('../models/userModel');
 const { loggerUtil } = require('../utils/logger');
 const { BAD_REQUEST, OK, NOT_FOUND } = require('../utils/statusCode');
 const { addNotification } = require('./notification');
 
-const getReminderOfUser = async (req, res) => {
+const getCareNotesOfUser = async (req, res) => {
     try {
         const authId = req.auth._id
         const limit = req.query.limit || 10
         const skip = req.query.skip || 0
         User.findOne({ _id: authId })
             .then(user => {
-                Reminder
+                CareNotes
                     .find({ "user": user._id })
                     .limit(limit)
                     .skip(limit * skip)
                     .sort({ createdAt: -1 })
-                    .then(Reminder => {
-                        if (!Reminder) {
+                    .then(careNotes => {
+                        if (!careNotes) {
                             return res.status(NOT_FOUND).json({
-                                error: 'No Reminder were found in a DB!'
+                                error: 'No Care Notes were found in a DB!'
                             })
                         }
                         res.status(OK).json({
                             status: OK,
-                            message: 'Reminders Fetched Successfully!',
-                            data: Reminder
+                            message: 'Care Notes Fetched Successfully!',
+                            data: careNotes
                         })
                     })
             })
@@ -41,30 +41,28 @@ const getReminderOfUser = async (req, res) => {
         loggerUtil({ err: err })
     }
     finally {
-        loggerUtil("Get Reminder of User API called.")
+        loggerUtil("Get Care Notes of User API called.")
     }
 }
 
-const addReminderForUser = async (req, res) => {
+const addCareNoteForUser = async (req, res) => {
     try {
-        const { type, name, reminderData, time, note } = req.body
+        const { name, time, note } = req.body
         const userId = req.params.userId
         User.findOne({ userId: userId }).then(user => {
-            const newReminder = new Reminder({
+            const newCareNote = new CareNotes({
                 user: user._id,
-                type: type,
                 name: name,
-                reminderData: reminderData,
                 time: time,
                 note: note
             })
-            newReminder
+            newCareNote
                 .save()
                 .then(reminder => {
-                    addNotification(user._id, "Your Reminder has been successfully Setuped.")
+                    addNotification(user._id, "Your Care Note has been successfully Added.")
                     res.status(OK).json({
                         status: OK,
-                        message: "Reminder Added Successfully.",
+                        message: "Care Note Added Successfully.",
                         data: reminder
                     })
                 })
@@ -81,17 +79,17 @@ const addReminderForUser = async (req, res) => {
         loggerUtil(err, 'ERROR')
     }
     finally {
-        loggerUtil("Add Reminder API Called.")
+        loggerUtil("Add Care Note API Called.")
     }
 }
 
-const updateReminderById = async (req, res) => {
+const updateCareNoteById = async (req, res) => {
     try {
-        const reminderId = req.params.reminderId
-        Reminder.findOneAndUpdate({ _id: reminderId }, req.body, { new: true })
+        const careNoteId = req.params.careNoteId
+        CareNotes.findOneAndUpdate({ _id: careNoteId }, req.body, { new: true })
             .then(updatedReminder => res.status(OK).json({
                 status: OK,
-                message: "Reminder successfully updated.",
+                message: "Care Note successfully updated.",
                 data: updatedReminder
             }))
             .catch(err => res.status(BAD_REQUEST).json({
@@ -103,24 +101,24 @@ const updateReminderById = async (req, res) => {
         loggerUtil(err, 'ERROR')
     }
     finally {
-        loggerUtil("Update Reminder API Called.")
+        loggerUtil("Update Care Note API Called.")
     }
 }
 
-const deleteReminderById = async (req, res) => {
+const deleteCareNoteById = async (req, res) => {
     try {
-        const reminderId = req.params.reminderId
-        Reminder.findByIdAndDelete({ _id: reminderId })
-            .then(reminder => {
-                if (!reminder) {
+        const careNoteId = req.params.careNoteId
+        CareNotes.findByIdAndDelete({ _id: careNoteId })
+            .then((careNote) => {
+                if (!careNote) {
                     return res.status(NOT_FOUND).json({
                         status: NOT_FOUND,
-                        message: "Reminder not Found.",
+                        message: "Care Note not Found.",
                     })
                 }
                 res.status(OK).json({
                     status: OK,
-                    message: "Reminder deleted Succesfully.",
+                    message: "Care Note deleted Succesfully.",
                 })
             })
             .catch(err => res.status(BAD_REQUEST).json({
@@ -132,9 +130,9 @@ const deleteReminderById = async (req, res) => {
         loggerUtil(err, 'ERROR')
     }
     finally {
-        loggerUtil("Delete Reminder API Called.")
+        loggerUtil("Delete Care Note API Called.")
     }
 }
 
 
-module.exports = { getReminderOfUser, addReminderForUser, updateReminderById, deleteReminderById }
+module.exports = { getCareNotesOfUser, addCareNoteForUser, updateCareNoteById, deleteCareNoteById }

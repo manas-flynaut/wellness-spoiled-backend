@@ -13,29 +13,26 @@ const userSchema = new mongoose.Schema({
     encrypted_password: { type: String, required: [true, "Please add password"] },
     onboardingQuestions: [
         {
-            levelOfSelfCare: {
-                type: String,
-                trim: true,
-                default: null
-            },
-            expressGratitude: {
-                type: String,
-                trim: true,
-                default: null
-            },
-            startDay: {
-                type: String,
-                trim: true,
-                default: null
-            },
-            bedTime: {
-                type: String,
-                trim: true,
-                default: null
-            }
+            levelOfSelfCare: { type: String, trim: true, default: null },
+            expressGratitude: { type: String, trim: true, default: null },
+            startDay: { type: String, trim: true, default: null },
+            bedTime: { type: String, trim: true, default: null }
         }
-
-    ]
+    ],
+    savedUserAddress: [{
+        countryName: { type: String, trim: true },
+        addressLine1: { type: String, trim: true },
+        addressLine2: { type: String, trim: true },
+        city: { type: String, trim: true, },
+        state: { type: String, trim: true, },
+        zipCode: { type: Number, trim: true }
+    }],
+    savedUserCards: [{
+        nameOnCard: { type: String, trim: true },
+        cardNumber: { type: String, trim: true },
+        expiryDate: { type: String, trim: true },
+        cvv: { type: String, trim: true },
+    }]
 }, { timestamps: true })
 
 const User = mongoose.model('User', userSchema)
