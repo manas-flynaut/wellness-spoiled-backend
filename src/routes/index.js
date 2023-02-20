@@ -8,6 +8,7 @@ const notificationRoute = require("./notification")
 const reminderRoute = require("./reminder")
 const careNotesRoute = require("./careNotes")
 const careRoute = require("./care")
+
 const routes = (app) => {
     // Test Route for API
     app.get("/welcome", (req, res) => {
