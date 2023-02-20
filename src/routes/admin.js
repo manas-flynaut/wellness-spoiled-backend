@@ -5,7 +5,7 @@ const { isAdmin, isSameUserOrAdmin } = require('../middleware')
 const { loggerUtil } = require('../utils/logger')
 const { fileUploader } = require("../utils/fileUploader");
 const Content = require("../models/contentModel")
-const { content, getShopById, getAllList, updateShop, updatePrivacy, updateTerms, getPageById, addCategory,
+const { content, getShopById, getAllList, updateShop, updatePage, getPageById, addCategory,
     getAllCategories,
     uploadAudio,
     getAllAudio, updateContent } = require('../controllers/admin')
@@ -23,7 +23,7 @@ adminRoute.post(
     content
 )
 
-adminRoute.patch(
+adminRoute.post(
     '/admin/updateContent/:contentId',
     upload.fields([{ name: 'media', maxCount: 1 }]),
     isAdmin, 
@@ -43,16 +43,16 @@ adminRoute.get(
 )
 
 adminRoute.patch(
-    '/admin/updatePrivacy/:pageId',
+    '/admin/updatePage/:pageId',
     isAdmin,
-    updatePrivacy
+    updatePage
 )
 
-adminRoute.patch(
-    '/admin/updateTerms/:pageId',
-    isAdmin,
-    updateTerms
-)
+// adminRoute.patch(
+//     '/admin/updateTerms/:pageId',
+//     isAdmin,
+//     updateTerms
+// )
 
 adminRoute.get(
     '/admin/get-all',

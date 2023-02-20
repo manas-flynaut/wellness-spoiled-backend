@@ -86,10 +86,10 @@ const updateContent = async (req, res) => {
     try {
         const id = req.params.contentId
         let contentData = await Content.findOne({ _id: id })
-        if (req.files) {
+        if (req.files.media) {
             req.files.media ? req.body.link =  req.files.media[0].path : '';
+            var imageUrl = await uploadFile(req.files.media[0].path,"images/Content")
         }
-        let imageUrl = await uploadFile(req.files.media[0].path,"Content")
         const { name, designation, email, website, description, content } = req.body
         if (!contentData) {
             console.log("insert")
@@ -117,7 +117,7 @@ const updateContent = async (req, res) => {
                 website: website, 
                 description: description, 
                 content: content,
-                image : imageUrl
+                image : imageUrl?imageUrl:contentData.image
             }}).exec(function(err, content){
                 if(err) {
                     console.log(err);
@@ -223,7 +223,7 @@ const updateShop = async (req, res) => {
     }
 }
 
-const updatePrivacy = async (req, res) => {
+const updatePage = async (req, res) => {
     try {
         const id = req.params.pageId
         let page = await Page.findOne({ _id: id })
@@ -262,55 +262,56 @@ const updatePrivacy = async (req, res) => {
     }
 }
 
-const updateTerms = async (req, res) => {
-    try {
-        const id = req.params.pageId
-        let page = await Page.findOne({ _id: id })
-        const { content } = req.body
-        if (!page) {
-            const newPage = new Page({
-                content: content,
-                pageType: "Terms"
-            });
-            newPage.save().then(page => res.status(OK).json({
-                status:OK,
-                message: "Data Added Successfully.",
-                data: page
-            }))
-            .catch(err => res.status(BAD_REQUEST).json({ message: err.message }));
-        } else {
-            Page.findOneAndUpdate({ "_id": id }, { "$set": { content:content}}).exec(function(err, page){
-                if(err) {
-                    console.log(err);
-                    res.status(NOT_FOUND).json({
-                        status:NOT_FOUND,
-                        error: err
-                    })
-                } else {
-                    res.status(OK).json({
-                        status:OK,
-                        message: 'Page Updated Successfully!'
-                    })
-                }
-            });
-        } 
-    } catch (err) {
-        loggerUtil(err, 'ERROR')
-    } finally {
-        loggerUtil('Update shop info Function is Executed!')
-    }
-}
+// const updateTerms = async (req, res) => {
+//     try {
+//         const id = req.params.pageId
+//         let page = await Page.findOne({ _id: id })
+//         const { content } = req.body
+//         if (!page) {
+//             const newPage = new Page({
+//                 content: content,
+//                 pageType: "Terms"
+//             });
+//             newPage.save().then(page => res.status(OK).json({
+//                 status:OK,
+//                 message: "Data Added Successfully.",
+//                 data: page
+//             }))
+//             .catch(err => res.status(BAD_REQUEST).json({ message: err.message }));
+//         } else {
+//             Page.findOneAndUpdate({ "_id": id }, { "$set": { content:content}}).exec(function(err, page){
+//                 if(err) {
+//                     console.log(err);
+//                     res.status(NOT_FOUND).json({
+//                         status:NOT_FOUND,
+//                         error: err
+//                     })
+//                 } else {
+//                     res.status(OK).json({
+//                         status:OK,
+//                         message: 'Page Updated Successfully!'
+//                     })
+//                 }
+//             });
+//         } 
+//     } catch (err) {
+//         loggerUtil(err, 'ERROR')
+//     } finally {
+//         loggerUtil('Update shop info Function is Executed!')
+//     }
+// }
 
 const addCategory = async (req, res) => {
     try {
-        if (req.files) {
+        if (req.files.media) {
             req.files.media ? req.body.link =  req.files.media[0].path : '';
+            var imageUrl = await uploadFile(req.files.media[0].path,"images/Category")
         }
         const { title } = req.body
 
         const newContent = new Category({
             title: title,
-            image: normalize(req.files.media[0].path)
+            image: imageUrl
         });
         newContent.save().then(content => res.status(OK).json({
             message: "Category Added Successfully.",
@@ -326,14 +327,21 @@ const addCategory = async (req, res) => {
 
 const uploadAudio = async (req, res) => {
     try {
-        if (req.files) {
+        if (!req.files.media) {
+            return res.status(OK).json({
+                status:OK,
+                message: 'Audio File is required!'
+            })
+            
+        }else {
             req.files.media ? req.body.link =  req.files.media[0].path : '';
+            var audioUrl = await uploadFile(req.files.media[0].path,"audio")
         }
         const { category } = req.body
 
         const newAudio = new Audio({
             category: category,
-            audio : req.files.media[0].path
+            audio : audioUrl
         });
         newAudio.save().then(audio => res.status(OK).json({
             message: "Audio Uploaded Successfully.",
@@ -393,7 +401,7 @@ const getAllAudio = async (req, res) => {
     }
 }
 
-module.exports = { content, getAllList, updateShop, getShopById, updatePrivacy, updateTerms, getPageById, addCategory,
+module.exports = { content, getAllList, updateShop, getShopById, updatePage, getPageById, addCategory,
     getAllCategories,
     uploadAudio,
     getAllAudio,

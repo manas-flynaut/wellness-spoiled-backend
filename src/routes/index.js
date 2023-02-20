@@ -6,6 +6,7 @@ const roleRoute = require("./role")
 const adminRoute = require("./admin")
 const notificationRoute = require("./notification")
 const reminderRoute = require("./reminder")
+const careRoute = require("./care")
 
 const routes = (app) => {
     // Test Route for API
@@ -20,6 +21,7 @@ const routes = (app) => {
     app.use("/api/v1", isSignedIn, isValidToken, reminderRoute)
     app.use('/api/v1', isSignedIn, isValidToken, roleRoute)
     app.use('/api/v1', isSignedIn, isValidToken, adminRoute)
+    app.use('/api/v1', isSignedIn, isValidToken, careRoute)
 
     return app
 }
