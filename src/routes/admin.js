@@ -5,7 +5,7 @@ const { isAdmin, isSameUserOrAdmin } = require('../middleware')
 const { loggerUtil } = require('../utils/logger')
 const { fileUploader } = require("../utils/fileUploader");
 const Content = require("../models/contentModel")
-const { content, getShopById, getAllList, updateShop, updatePage, getPageById, addCategory,
+const { userAction, content, getShopById, getAllList, updateShop, updatePage, getPageById, addCategory,
     getAllCategories,
     uploadAudio,
     getAllAudio, updateContent } = require('../controllers/admin')
@@ -15,6 +15,12 @@ const adminRoute = express.Router()
 const upload = fileUploader("/WORK/NODEJS/wellness-spoiled-backend/Assets/Content");
 const audio = fileUploader("/WORK/NODEJS/wellness-spoiled-backend/Assets/Audio");
 const category = fileUploader("/WORK/NODEJS/wellness-spoiled-backend/Assets/Category");
+
+adminRoute.patch(
+    '/admin/userAction/:userId',
+    isAdmin,
+    userAction
+)
 
 adminRoute.post(
     '/admin/addContent',
@@ -47,6 +53,7 @@ adminRoute.patch(
     isAdmin,
     updatePage
 )
+
 
 // adminRoute.patch(
 //     '/admin/updateTerms/:pageId',

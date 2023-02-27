@@ -3,11 +3,62 @@ const Shop = require("../models/shopModel")
 const Page = require("../models/pageModel")
 const Category = require("../models/categoryModel")
 const Audio = require("../models/audioModel")
+const User = require("../models/userModel")
 const { loggerUtil } = require("../utils/logger")
 const { normalize } = require('path')
 const { OK, WRONG_ENTITY, BAD_REQUEST, NOT_FOUND, UNAUTHORIZED, INTERNAL_SERVER_ERROR } = require("../utils/statusCode")
 const { uploadFile }  = require("../utils/upload");
 
+const userAction = async (req, res) => {
+    try {
+        const id = req.params.userId
+        let user = await User.findOne({ _id: id })
+        if (!user) {
+            res.status(OK).json({
+                status:OK,
+                message: 'User Not Found!',
+                data: {}
+            })
+        } else {
+            console.log(user.blocked)
+            if(user.blocked == false){
+                User.findOneAndUpdate({ "_id": id }, { "$set": { blocked: true }}).exec(function(err, page){
+                    if(err) {
+                        console.log(err);
+                        res.status(NOT_FOUND).json({
+                            status:NOT_FOUND,
+                            error: err
+                        })
+                    } else {
+                        res.status(OK).json({
+                            status:OK,
+                            message: 'User Deactivated Successfully!'
+                        })
+                    }
+                });
+            }else if (user.blocked == true){
+                User.findOneAndUpdate({ "_id": id }, { "$set": { blocked: false}}).exec(function(err, page){
+                    if(err) {
+                        console.log(err);
+                        res.status(NOT_FOUND).json({
+                            status:NOT_FOUND,
+                            error: err
+                        })
+                    } else {
+                        res.status(OK).json({
+                            status:OK,
+                            message: 'User activated Successfully!'
+                        })
+                    }
+                });
+            }
+        } 
+    } catch (err) {
+        loggerUtil(err, 'ERROR')
+    } finally {
+        loggerUtil('Update user info Function is Executed!')
+    }
+}
 const getShopById = async (req, res) => {
     try {
         const id = req.params.shopId
@@ -262,45 +313,6 @@ const updatePage = async (req, res) => {
     }
 }
 
-// const updateTerms = async (req, res) => {
-//     try {
-//         const id = req.params.pageId
-//         let page = await Page.findOne({ _id: id })
-//         const { content } = req.body
-//         if (!page) {
-//             const newPage = new Page({
-//                 content: content,
-//                 pageType: "Terms"
-//             });
-//             newPage.save().then(page => res.status(OK).json({
-//                 status:OK,
-//                 message: "Data Added Successfully.",
-//                 data: page
-//             }))
-//             .catch(err => res.status(BAD_REQUEST).json({ message: err.message }));
-//         } else {
-//             Page.findOneAndUpdate({ "_id": id }, { "$set": { content:content}}).exec(function(err, page){
-//                 if(err) {
-//                     console.log(err);
-//                     res.status(NOT_FOUND).json({
-//                         status:NOT_FOUND,
-//                         error: err
-//                     })
-//                 } else {
-//                     res.status(OK).json({
-//                         status:OK,
-//                         message: 'Page Updated Successfully!'
-//                     })
-//                 }
-//             });
-//         } 
-//     } catch (err) {
-//         loggerUtil(err, 'ERROR')
-//     } finally {
-//         loggerUtil('Update shop info Function is Executed!')
-//     }
-// }
-
 const addCategory = async (req, res) => {
     try {
         if (req.files.media) {
@@ -401,7 +413,7 @@ const getAllAudio = async (req, res) => {
     }
 }
 
-module.exports = { content, getAllList, updateShop, getShopById, updatePage, getPageById, addCategory,
+module.exports = { userAction, content, getAllList, updateShop, getShopById, updatePage, getPageById, addCategory,
     getAllCategories,
     uploadAudio,
     getAllAudio,
