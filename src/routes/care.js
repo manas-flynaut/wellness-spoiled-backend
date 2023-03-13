@@ -18,7 +18,7 @@ careRoute.post(
 )
 
 careRoute.get(
-    '/care/getEjournal/:week',
+    '/care/getEjournal/:user',
     isSameUserOrAdmin,
     getEjournal
 )

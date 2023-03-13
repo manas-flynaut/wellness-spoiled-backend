@@ -7,8 +7,9 @@ const { uploadFile }  = require("../utils/upload");
 
 const getEjournal = async (req, res) => {
     try {
-        const weekType = req.params.week
-        let ejournal = await Ejournal.findOne({ "week" : weekType })
+        const user = req.params.user
+        const weekType = req.query.week
+        let ejournal = await Ejournal.findOne({ "user" : user,"week" : weekType })
         if (!ejournal) {
             res.status(OK).json({
                 status:OK,
