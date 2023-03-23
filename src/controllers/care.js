@@ -9,7 +9,7 @@ const getEjournal = async (req, res) => {
     try {
         const user = req.params.user
         const weekType = req.query.week
-        Ejournal.findOne({ user: user })
+        Ejournal.findOne({ user: user }).sort({createdAt:-1}).limit(1)
             .then(user => {
                 if (!user) {
                     return res.status(NOT_FOUND).json({
