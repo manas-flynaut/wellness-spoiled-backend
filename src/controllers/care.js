@@ -9,19 +9,39 @@ const getEjournal = async (req, res) => {
     try {
         const user = req.params.user
         const weekType = req.query.week
-        let ejournal = await Ejournal.findOne({ "user" : user,"week" : weekType })
-        if (!ejournal) {
-            res.status(OK).json({
-                status:OK,
-                message: 'ejournal Not Found!',
-                data: {}
+        Ejournal.findOne({ user: user }).sort({createdAt:-1}).limit(1)
+            .then(user => {
+                if (!user) {
+                    return res.status(NOT_FOUND).json({
+                        error: 'No Reminder were found in a DB!'
+                    })
+                }
+                res.status(OK).json({
+                    status: OK,
+                    message: 'Data Fetched Successfully!',
+                    data: user
+                })
             })
-        }
-        res.status(OK).json({
-            status:OK,
-            message: 'ejournal Fetched Successfully!',
-            data: ejournal
-        })
+            .catch(err => {
+                loggerUtil(err)
+                res.status(BAD_REQUEST).json({
+                    status: BAD_REQUEST,
+                    err: err
+                })
+            })
+        // let ejournal = await Ejournal.findOne({ "user" : user,"week" : weekType })
+        // if (!ejournal) {
+        //     res.status(OK).json({
+        //         status:OK,
+        //         message: 'ejournal Not Found!',
+        //         data: {}
+        //     })
+        // }
+        // res.status(OK).json({
+        //     status:OK,
+        //     message: 'ejournal Fetched Successfully!',
+        //     data: ejournal
+        // })
     } catch (err) {
         loggerUtil(err, 'ERROR')
     } finally {
